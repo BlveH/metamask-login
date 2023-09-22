@@ -1,16 +1,34 @@
-const express = require("express");
-const crypto = require("crypto");
-const ethers = require("ethers");
+import express from "express";
+import crypto from "crypto";
+import ethers from "ethers";
+import path from "path";
+import { connect } from "./connectDB.js";
+import jwt from "jsonwebtoken";
+
 const app = express();
-const path = require("path");
-const connect = require("./connectDB.mjs")
-app.use(express.static(__dirname));
-const jwt = require("jsonwebtoken");
+
 app.use(express.json());
-connect()
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname + "/index.html"));
+app.set("view engine", "ejs");
+
+app.get("/", async (req, res) => {
+  try {
+    // Your existing code to get the nonce and other data
+    // ...
+
+    // Define the 'message' variable
+    const message = "Welcome to the EJS template!"; // Replace this with your actual message
+
+    // Pass data to the EJS template, including 'message'
+    const data = { message };
+
+    // Render the EJS template
+    res.render("index", data);
+  } catch (error) {
+    console.error(error);
+  }
 });
+
+connect();
 
 // GET route to retrieve a nonce value for use in signing
 app.get("/api/nonce", (req, res) => {
@@ -66,7 +84,7 @@ app.post("/verify", (req, res) => {
 
 // Serve the success page
 app.get("/success", (req, res) => {
-  res.sendFile(path.join(__dirname + "/success.html"));
+  res.sendFile(path.join(rootDirectory, "success.html"));
 });
 
 // Start the server
