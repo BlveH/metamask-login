@@ -1,12 +1,16 @@
 # Metamask Login Page
 
-To run the code, you need to run the following commands. 
+To run the code, you need to run the following commands.
 
 ```shell
 yarn
 ```
 
-Then start the backend server by using the following command 
+```shell
+yarn up
+```
+
+Then start the backend server by using the following command
 
 ```shell
 yarn start
