@@ -1,9 +1,9 @@
 import express from "express";
 import crypto from "crypto";
 import ethers from "ethers";
-import path from "path";
 import { connect } from "./connectDB.js";
 import jwt from "jsonwebtoken";
+import User from "./model/user.model.js";
 
 const app = express();
 
@@ -12,13 +12,7 @@ app.set("view engine", "ejs");
 
 app.get("/", async (req, res) => {
   try {
-    // Your existing code to get the nonce and other data
-    // ...
-
-    // Define the 'message' variable
-    const message = "Welcome to the EJS template!"; // Replace this with your actual message
-
-    // Pass data to the EJS template, including 'message'
+    const message = "Welcome to the EJS template!";
     const data = { message };
 
     // Render the EJS template
@@ -40,42 +34,66 @@ app.get("/api/nonce", (req, res) => {
 
 const secretKey = "mySecretKey";
 
-app.post("/login", (req, res) => {
-  console.log(req.body);
-  const { signedMessage, message, address } = req.body;
-  const recoveredAddress = ethers.utils.verifyMessage(message, signedMessage);
-  console.log("Recovermessage: ", recoveredAddress);
-  if (recoveredAddress !== address) {
-    return res.status(401).json({ error: "Invalid signature" });
-  }
+app.post("/login", async (req, res) => {
+  try {
+    console.log(req.body);
+    const { signedMessage, message, address } = req.body;
+    const recoveredAddress = ethers.utils.verifyMessage(message, signedMessage);
+    console.log("Recovermessage: ", recoveredAddress);
+    if (recoveredAddress !== address) {
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+    const existUser = await User.findOne({ signature: signedMessage });
+    if (existUser) {
+      existUser.nonce = req.body.message.split(" ")[10];
+      await existUser.save();
+    } else {
+      await User.create({
+        signature: signedMessage,
+        nonce: req.body.message.split(" ")[10],
+      });
+    }
 
-  // Generate the JWT token
-  const token = jwt.sign({ address }, secretKey, { expiresIn: "10s" });
-  console.log("Access Token:", token);
-  // Send the JWT token to the frontend
-  res.json(token);
+    // Generate the JWT token
+    const token = jwt.sign({ address, signature: signedMessage }, secretKey, {
+      expiresIn: "10s",
+    });
+    console.log("Access Token:", token);
+    // Send the JWT token to the frontend
+    res.json(token);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // Endpoint for verifying the JWT token and logging in the user
-app.post("/verify", (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
+app.post("/verify", async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
     // Verify the JWT token
     const decoded = jwt.verify(token, secretKey);
     console.log("Decode: ", decoded);
     const currentTime = Math.floor(Date.now() / 1000);
     console.log(currentTime);
     if (decoded.exp < currentTime) {
-      res.json("tokenExpired");
+      return res.json("tokenExpired");
     } else {
-      res.json("ok");
+      await User.findOneAndUpdate(
+        {
+          signature: decoded.signature,
+        },
+        {
+          $set: { nonce: "" },
+        }
+      );
+      return res.json("ok");
     }
   } catch (err) {
     res.status(401).json({ error: "Invalid token" });
@@ -83,8 +101,12 @@ app.post("/verify", (req, res) => {
 });
 
 // Serve the success page
-app.get("/success", (req, res) => {
-  res.sendFile(path.join(rootDirectory, "success.html"));
+app.get("/success", async (req, res) => {
+  try {
+    res.render("success");
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 // Start the server
