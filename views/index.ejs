@@ -54,10 +54,10 @@
       async function signMessage() {
         try {
           var element = document.getElementById("p1");
-          let stored = window.localStorage.getItem("token");
+          let stored = window.sessionStorage.getItem("token");
 
-          if (window.localStorage.getItem("token") != null) {
-            let token = window.localStorage.getItem("token");
+          if (window.sessionStorage.getItem("token") != null) {
+            let token = window.sessionStorage.getItem("token");
             const response = await fetch("/verify", {
               method: "POST",
               headers: {
@@ -71,7 +71,7 @@
             if (newresponse == "ok") {
               window.location.href = "/success";
             } else {
-              window.localStorage.removeItem("token");
+              window.sessionStorage.removeItem("token");
               element.innerHTML =
                 "Token Expired, log in again to get a new Token !!!";
             }
@@ -97,7 +97,7 @@
             });
 
             let token = await response.json();
-            window.localStorage.setItem("token", token);
+            window.sessionStorage.setItem("token", token);
             const newResponse = await fetch("/verify", {
               method: "POST",
               headers: {
